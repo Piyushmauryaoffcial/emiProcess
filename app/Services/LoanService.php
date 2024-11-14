@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\LoanDetailsRepository;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class LoanService
 {
@@ -59,13 +60,17 @@ class LoanService
         $remainingAmount = $loan->loan_amount;
         $data = ['clientid' => $loan->clientid];
 
+        $currentDate = Carbon::parse($loan->first_payment_date);
+
         foreach ($columns as $month) {
-            if ($remainingAmount > 0) {
-                $data[$month] = min($emiAmount, $remainingAmount);
-                $remainingAmount -= $data[$month];
-            } else {
-                $data[$month] = 0;
-            }
+          // Check if the current month is within the loan period
+          if ($currentDate->format('Y_M') === $month && $remainingAmount > 0) {
+            $data[$month] = min($emiAmount, $remainingAmount);
+            $remainingAmount -= $data[$month];
+            $currentDate->addMonth(); // Move to the next month
+        } else {
+            $data[$month] = 0;
+        }
         }
 
         DB::table('emi_details')->insert($data);
